@@ -34,7 +34,7 @@ var (
 
 type ConnectionHandler interface {
 	GetId() string
-	ValidateOrigin(requestOrigin string) error
+	ValidateRequest(requestOrigin string) error
 }
 
 type EthereumValidatorServer struct {
@@ -106,6 +106,7 @@ func initEthereumValidatorServer() (*EthereumValidatorServer, error) {
 	// Init request handler & register with event bus
 	requestHandler := &validatorServerRequestHandler{
 		server: eventServer,
+		router: router,
 	}
 	eventServer.inlineServer.Handler = requestHandler
 
@@ -180,16 +181,27 @@ func (e *EthereumValidatorServer) AddHTTPHandler(h *EthereumValidatorHTTPSession
 	log.Infof("Added new http session handler '%v'", h.handlerId)
 }
 
+func (e *EthereumValidatorServer) RemoveHTTPHandler(handlerId string) {
+	defer e.connMtx.Unlock()
+	e.connMtx.Lock()
+	if _, ok := e.activeHTTPSessions[handlerId]; !ok {
+		log.Warnf("Unable to remove http session handler '%v'. Handler not found.", handlerId)
+		return
+	}
+	delete(e.activeHTTPSessions, handlerId)
+	log.Infof("Removed http session handler '%v'", handlerId)
+}
+
 func (e *EthereumValidatorServer) OnShutdown() {
 	log.Warnf("Gracefully shutting down %v...", constants.AppName)
 	// Close all active connections
+	defer time.Sleep(time.Second * 5)
+	defer fmt.Println("... done! Stopping process in 5 seconds...")
 	defer e.connMtx.Unlock()
 	e.connMtx.Lock()
 	for name, _ := range e.activeHTTPSessions {
 		e.activeHTTPSessions[name] = nil
 	}
-	fmt.Println("... done! Stopping process in 5 seconds...")
-	time.Sleep(time.Second * 5)
 }
 
 func shutdownHook() {

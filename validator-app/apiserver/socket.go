@@ -68,9 +68,15 @@ func (h *validatorServerRequestHandler) ServeHTTP(w http.ResponseWriter, req *ht
 			}
 		}
 
+		// FIXME: This ensures the session is being cleaned up after the request has been processed.
+		// FIXME: Remove this line of code if you want to keep track of sessions and/or storing session data across requests.
+		defer handler.finalize()
+
+		// TODO: This is part of a potential future session verification mechanism;
+		// TODO: but for this prototype implementation it only gets called on the same request as the session is created.
 		// Validate Request against Session Info - Very rudimentary IP check; should be done more safely
-		if errValidate := h.ValidateRequestForHTTPSession(req, handler); errValidate != nil {
-			errorMessage := fmt.Sprintf("failed to validate session: %v", errValidate.Error())
+		if errValidate := handler.ValidateRequest(req); errValidate != nil {
+			errorMessage := fmt.Sprintf("failed to validate request for session %v: %v", handler.handlerId, errValidate.Error())
 			log.Warning(errorMessage)
 			// Unauthorized
 			w.WriteHeader(401)
@@ -79,28 +85,12 @@ func (h *validatorServerRequestHandler) ServeHTTP(w http.ResponseWriter, req *ht
 		}
 
 		// Return Validator Session ID as part of the response header
-		w.Header().Add("Validator-Session-Id", handler.GetId())
+		// TODO: This is commented out because we're not keeping track of sessions in the prototype
+		// w.Header().Add("Validator-Session-Id", handler.GetId())
 
 		// Handle the requests based on Path and Method
 		h.router.ServeHTTP(w, req)
 	}
-}
-
-func (h *validatorServerRequestHandler) ValidateRequestForHTTPSession(req *http.Request, handler *EthereumValidatorHTTPSessionHandler) error {
-	// Get Required Headers
-	requestOrigin := req.RemoteAddr
-	apiKey := req.Header.Get("Validator-Api-Key")
-	if len(requestOrigin) == 0 || len(apiKey) == 0 {
-		return errors.New("session init headers invalid")
-	}
-	requestAPIKey := viper.GetString("DEFAULT_API_KEY")
-	if requestAPIKey != apiKey {
-		return errors.New("invalid api key")
-	}
-	if errOrigin := handler.ValidateOrigin(requestOrigin); errOrigin != nil {
-		return errOrigin
-	}
-	return nil
 }
 
 func (h *validatorServerRequestHandler) InitializeHTTPSession(req *http.Request) (*EthereumValidatorHTTPSessionHandler, error) {
@@ -108,7 +98,7 @@ func (h *validatorServerRequestHandler) InitializeHTTPSession(req *http.Request)
 	requestOrigin := req.RemoteAddr
 	apiKey := req.Header.Get("Validator-Api-Key")
 	if len(requestOrigin) == 0 || len(apiKey) == 0 {
-		return nil, errors.New("session init headers invalid")
+		return nil, errors.New("request headers invalid")
 	}
 
 	// Verify API Key
