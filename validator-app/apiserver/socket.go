@@ -22,6 +22,9 @@ const (
 	HANDLE_REQUEST_FAILED   = "HANDLE_REQUEST_FAILED"   // Default result if the request could not properly handle a HTTP Request
 	INVALID_ROUTE           = "INVALID_ROUTE"           // Default result if the route is not defined
 	METHOD_NOT_ALLOWED      = "METHOD_NOT_ALLOWED"      // Default result if the method is not implemented
+	INTERNAL_SERVER_ERROR   = "INTERNAL_SERVER_ERROR"
+	NOT_FOUND               = "NOT_FOUND"
+	BAD_REQUEST             = "BAD_REQUEST"
 )
 
 type ValidatorHttpError struct {

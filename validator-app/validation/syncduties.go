@@ -5,6 +5,6 @@ type SyncDutiesResponse struct {
 	PublicValidatorKeys []string
 }
 
-func GetSyncDuties(slot string) (*SyncDutiesResponse, error) {
+func GetSyncDuties(slot uint64) (*SyncDutiesResponse, error) {
 
 }

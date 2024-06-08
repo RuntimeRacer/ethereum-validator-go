@@ -10,6 +10,7 @@ import (
 	"github.com/runtimeracer/ethereum-validator-go/validation"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -73,9 +74,22 @@ func AddRoutes(router *chi.Mux) {
 
 func blockRewardGetSlot(w http.ResponseWriter, r *http.Request) {
 	slot := chi.URLParam(r, "slot")
-	slotDetails, errSlot := validation.GetBlockRewardSlot(slot)
+	slotNumber, errParseSlotNumber := strconv.ParseUint(slot, 10, 64)
+	if errParseSlotNumber != nil {
+		w.WriteHeader(404)
+		errorHTTPResponse(w, NOT_FOUND, validation.ErrSlotDoesNotExist)
+		return
+	}
+
+	slotDetails, errSlot := validation.GetBlockRewardSlot(slotNumber)
 	if errSlot != nil {
-		// TODO
+		// Log error
+		log.Errorf("failed to get slot reward details: %v", errSlot)
+		//
+		// return 500 to caller with generic info to avoid leaking backend data
+		w.WriteHeader(500)
+		errorHTTPResponse(w, INTERNAL_SERVER_ERROR, "")
+		return
 	}
 	// 200 OK
 	w.WriteHeader(200)
@@ -87,9 +101,21 @@ func blockRewardGetSlot(w http.ResponseWriter, r *http.Request) {
 
 func syncDutiesGetSlot(w http.ResponseWriter, r *http.Request) {
 	slot := chi.URLParam(r, "slot")
-	syncDuties, errSlot := validation.GetSyncDuties(slot)
+	slotNumber, errParseSlotNumber := strconv.ParseUint(slot, 10, 64)
+	if errParseSlotNumber != nil {
+		w.WriteHeader(404)
+		errorHTTPResponse(w, NOT_FOUND, validation.ErrSlotDoesNotExist)
+		return
+	}
+
+	syncDuties, errSlot := validation.GetSyncDuties(slotNumber)
 	if errSlot != nil {
-		// TODO
+		// Log error
+		log.Errorf("failed to get slot syncduties details: %v", errSlot)
+		// return 500 to caller with generic info to avoid leaking backend data
+		w.WriteHeader(500)
+		errorHTTPResponse(w, INTERNAL_SERVER_ERROR, "")
+		return
 	}
 	// 200 OK
 	w.WriteHeader(200)
